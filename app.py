@@ -214,13 +214,13 @@ def mostrar_reinas():
     cols = st.columns([1, 1, 2])
     
     with cols[0]:
-        if st.button("🔀 Posición Aleatoria"):
+        if st.button("🔀 Posición Aleatoria", key="btn_random_reinas"):
             # Genera un nuevo vector con números al azar del 0 al 7
             st.session_state.estado_reinas = [random.randint(0, 7) for _ in range(8)]
             st.rerun()
             
     with cols[1]:
-        if st.button("▶️ Ejecutar Paso"):
+        if st.button("▶️ Ejecutar Paso", key="btn_ejecutar_paso"):
             if algoritmo == "Hill Climbing":
                 # Verificamos si ya ganamos
                 if calcular_ataques(st.session_state.estado_reinas) == 0:
