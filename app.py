@@ -236,34 +236,123 @@ def mostrar_reinas():
             else:
                 st.info("Próximamente: Simulated Annealing")
 
+# 1. Prueba Terminal y Función de Utilidad
+def verificar_estado_gato(tablero):
+    """
+    Evalúa si el juego terminó y devuelve la utilidad.
+    MAX (X) busca +1, MIN (O) busca -1. Empate es 0.
+    """
+    lineas_ganadoras = [
+        [0, 1, 2], [3, 4, 5], [6, 7, 8], # Horizontales
+        [0, 3, 6], [1, 4, 7], [2, 5, 8], # Verticales
+        [0, 4, 8], [2, 4, 6]             # Diagonales
+    ]
+    
+    for linea in lineas_ganadoras:
+        a, b, c = linea
+        if tablero[a] == tablero[b] == tablero[c] and tablero[a] != ' ':
+            return 1 if tablero[a] == 'X' else -1
+            
+    if ' ' not in tablero:
+        return 0 # Empate
+        
+    return None # El juego continúa
+
+# 2. Algoritmo Minimax (Recursivo)
+def minimax_gato(tablero, es_maximizador):
+    """
+    Simula todas las jugadas posibles hasta las hojas y respalda el valor minimax.
+    """
+    utilidad = verificar_estado_gato(tablero)
+    
+    # Condición de paro: si es nodo terminal, devolver U(s)
+    if utilidad is not None:
+        return utilidad
+        
+    if es_maximizador:
+        mejor_valor = -math.inf
+        for i in range(9):
+            if tablero[i] == ' ':
+                tablero[i] = 'X' # Acción de MAX
+                valor = minimax_gato(tablero, False)
+                tablero[i] = ' ' # Deshacer acción (Backtracking)
+                mejor_valor = max(mejor_valor, valor) # Conservar el máximo
+        return mejor_valor
+    else:
+        mejor_valor = math.inf
+        for i in range(9):
+            if tablero[i] == ' ':
+                tablero[i] = 'O' # Acción de MIN
+                valor = minimax_gato(tablero, True)
+                tablero[i] = ' '
+                mejor_valor = min(mejor_valor, valor) # Conservar el mínimo
+        return mejor_valor
+
+# 3. Función auxiliar para que la IA mueva
+def mejor_movimiento_ia(tablero):
+    mejor_valor = math.inf
+    mejor_movimiento = -1
+    
+    for i in range(9):
+        if tablero[i] == ' ':
+            tablero[i] = 'O' # La IA es MIN
+            valor = minimax_gato(tablero, True)
+            tablero[i] = ' '
+            if valor < mejor_valor:
+                mejor_valor = valor
+                mejor_movimiento = i
+                
+    return mejor_movimiento
+
 def mostrar_gato():
     st.header("❌ Gato / Tic-Tac-Toe ⭕")
     st.subheader("Búsqueda Adversaria")
-    algoritmo = st.radio("Selecciona el algoritmo:", ("Minimax", "Minimax con Poda Alfa-Beta"), horizontal=True)
+    st.info("Juegas como MAX (X). La IA juega como MIN (O) usando Minimax perfecto.")
     
-    st.write("### Tablero de Juego")
-    
-    # 1. Inicializamos el tablero vacío en la memoria de la app
+    # 1. Inicializamos el tablero en la memoria
     if 'tablero_gato' not in st.session_state:
         st.session_state.tablero_gato = [' '] * 9
+        st.session_state.ganador_gato = None
 
     # 2. Dibujamos la cuadrícula 3x3
-    # Usamos columnas de Streamlit para que se vea como un tablero real
-    cols = st.columns([1, 1, 1, 3]) # Las primeras 3 son el tablero, la última es espacio en blanco
+    st.write("### Tablero de Juego")
+    cols = st.columns([1, 1, 1, 3]) 
     
     for i in range(9):
         with cols[i % 3]:
-            # Dibujamos un botón por cada casilla
             etiqueta = st.session_state.tablero_gato[i] if st.session_state.tablero_gato[i] != ' ' else '...'
-            if st.button(etiqueta, key=f"casilla_{i}", use_container_width=True):
-                # Por ahora, solo hacemos que pinte una 'X' al darle clic (prueba visual)
-                if st.session_state.tablero_gato[i] == ' ':
-                    st.session_state.tablero_gato[i] = 'X'
-                    st.rerun() # Recarga la pantalla para mostrar el cambio
+            
+            # Bloquear botones si la casilla está ocupada o ya hay ganador
+            deshabilitado = st.session_state.tablero_gato[i] != ' ' or st.session_state.ganador_gato is not None
+            
+            if st.button(etiqueta, key=f"casilla_{i}", use_container_width=True, disabled=deshabilitado):
+                # Turno del Jugador (MAX)
+                st.session_state.tablero_gato[i] = 'X'
+                st.session_state.ganador_gato = verificar_estado_gato(st.session_state.tablero_gato)
+                
+                # Turno de la IA (MIN) si el juego no ha terminado
+                if st.session_state.ganador_gato is None:
+                    movimiento_ia = mejor_movimiento_ia(st.session_state.tablero_gato)
+                    if movimiento_ia != -1:
+                        st.session_state.tablero_gato[movimiento_ia] = 'O'
+                        st.session_state.ganador_gato = verificar_estado_gato(st.session_state.tablero_gato)
+                
+                st.rerun()
+
+    # 3. Mostrar resultado
+    if st.session_state.ganador_gato is not None:
+        st.markdown("---")
+        if st.session_state.ganador_gato == 1:
+            st.success("¡Ganaste! (Esto es imposible contra Minimax perfecto)")
+        elif st.session_state.ganador_gato == -1:
+            st.error("¡La IA (MIN) gana!")
+        else:
+            st.warning("¡Empate! (Suma Cero)")
 
     st.markdown("---")
     if st.button("🔄 Reiniciar Tablero", type="primary"):
         st.session_state.tablero_gato = [' '] * 9
+        st.session_state.ganador_gato = None
         st.rerun()
 
 # ==========================================
