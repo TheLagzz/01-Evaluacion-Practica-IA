@@ -2,6 +2,7 @@ import streamlit as st
 import random # Asegúrate de que esta línea esté hasta arriba en tu app.py con los otros imports
 import math # Asegúrate de que esté hasta arriba
 import heapq # Para la cola de prioridad en A* 
+import time # Para simular tiempos de espera en la visualización
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -91,7 +92,7 @@ def mostrar_frozen_lake():
     st.markdown("---")
     
     # 3. Controles
-    if st.button("▶️ Ejecutar Búsqueda", type="primary"):
+    if st.button("▶️ Ejecutar Búsqueda y Animar", key="btn_animar_frozen", type="primary"):
         inicio = (0, 0)
         meta = (3, 3)
         
@@ -99,23 +100,39 @@ def mostrar_frozen_lake():
         expandidos, ruta = buscar_ruta_laberinto(mapa, inicio, meta, algoritmo)
         
         if ruta:
-            st.success(f"¡Ruta encontrada usando {algoritmo} en {len(ruta)-1} pasos!")
+            st.success(f"¡Ruta encontrada usando {algoritmo}! Reproduciendo...")
             st.write(f"**Nodos explorados:** {len(expandidos)}")
             
-            # Redibujamos el mapa mostrando la ruta
-            st.write("### Solución:")
-            for fila in range(4):
-                cols = st.columns([1, 1, 1, 1, 4])
-                for col in range(4):
-                    celda = mapa[fila][col]
-                    # Si la coordenada está en la ruta ganadora, pintamos una huella
-                    if (fila, col) in ruta and celda not in ['S', 'G']:
-                        icono_mostrar = '🐾'
-                    else:
-                        icono_mostrar = iconos[celda]
-                        
-                    with cols[col]:
-                        st.button(icono_mostrar, key=f"res_{fila}_{col}", use_container_width=True, disabled=True)
+            # 4. LA MAGIA DE LA ANIMACIÓN
+            # Creamos un contenedor vacío en la pantalla
+            contenedor_animacion = st.empty()
+            
+            # Recorremos la ruta paso por paso (creando fotogramas)
+            for i, paso_actual in enumerate(ruta):
+                with contenedor_animacion.container():
+                    st.write(f"**Paso actual:** {i} / {len(ruta)-1}")
+                    
+                    for fila in range(4):
+                        cols = st.columns([1, 1, 1, 1, 4])
+                        for col in range(4):
+                            celda = mapa[fila][col]
+                            
+                            # Lógica para decidir qué pintar en este fotograma
+                            if (fila, col) == paso_actual:
+                                icono_mostrar = '🧍‍♂️'  # El jugador moviéndose
+                            elif (fila, col) in ruta[:i]:
+                                icono_mostrar = '🐾'  # Las huellas pasadas
+                            else:
+                                icono_mostrar = iconos[celda] # El mapa original
+                                
+                            with cols[col]:
+                                # Key dinámica obligatoria para que Streamlit no tire error en el loop
+                                st.button(icono_mostrar, key=f"anim_fl_{fila}_{col}_{i}", use_container_width=True, disabled=True)
+                
+                # Pausamos medio segundo antes de sobreescribir con el siguiente paso
+                time.sleep(0.5)
+            
+            st.balloons() # Efecto de victoria al llegar a la meta
         else:
             st.error("No se encontró ninguna ruta a la meta.")
 # ========================================== Parte de Sokoban (con mapa visual) ==========================================
