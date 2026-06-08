@@ -1,6 +1,7 @@
 import streamlit as st
 import random # Asegúrate de que esta línea esté hasta arriba en tu app.py con los otros imports
 import math # Asegúrate de que esté hasta arriba
+import heapq # Para la cola de prioridad en A* 
 
 # ==========================================
 # CONFIGURACIÓN DE LA PÁGINA
@@ -117,6 +118,88 @@ def mostrar_frozen_lake():
                         st.button(icono_mostrar, key=f"res_{fila}_{col}", use_container_width=True, disabled=True)
         else:
             st.error("No se encontró ninguna ruta a la meta.")
+# ========================================== Parte de Sokoban (con mapa visual) ==========================================
+def obtener_distancia_manhattan(cajas, metas):
+    """
+    Función Heurística h(n): Suma de las distancias en cruz
+    desde cada caja hasta su meta más cercana.
+    """
+    distancia_total = 0
+    for box in cajas:
+        distancia_total += min(abs(box[0] - t[0]) + abs(box[1] - t[1]) for t in metas)
+    return distancia_total
+
+def resolver_sokoban_astar(mapa_inicial):
+    """
+    Algoritmo A* que evalúa f(n) = g(n) + h(n) utilizando una cola de prioridad.
+    """
+    paredes = set()
+    metas = set()
+    inicio_jugador = None
+    inicio_cajas = set()
+
+    # Mapeamos la matriz para separar elementos estáticos de dinámicos
+    for f in range(5):
+        for c in range(5):
+            celda = mapa_inicial[f][c]
+            if celda == 'W': paredes.add((f, c))
+            elif celda == 'T': metas.add((f, c))
+            elif celda == 'B': inicio_cajas.add((f, c))
+            elif celda == 'P': inicio_jugador = (f, c)
+
+    # Convertimos las cajas a tupla ordenada para que sea un elemento inmutable (hashable)
+    inicio_cajas = tuple(sorted(inicio_cajas))
+    
+    # Estructura del open_set (Cola de prioridad): (f_score, g_score, jugador, cajas, historial_pasos)
+    h_inicial = obtener_distancia_manhattan(inicio_cajas, metas)
+    open_set = [(h_inicial, 0, inicio_jugador, inicio_cajas, [inicio_jugador])]
+    
+    # Registro de estados visitados para evitar bucles cíclicos
+    visitados = set([(inicio_jugador, inicio_cajas)])
+
+    movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Arriba, Abajo, Izquierda, Derecha
+
+    while open_set:
+        # Extraemos el nodo con el menor f_score estimado
+        _, g, jugador, cajas, ruta = heapq.heappop(open_set)
+
+        # Condición de parada (Prueba de meta): Todas las cajas están sobre metas
+        if set(cajas) == metas:
+            return ruta
+
+        f_j, c_j = jugador
+        for df, dc in movimientos:
+            n_j = (f_j + df, c_j + dc) # Próxima posición potencial del jugador
+
+            # Regla 1: El jugador no puede atravesar paredes
+            if n_j in paredes:
+                continue
+
+            # Regla 2: Interacción con cajas
+            if n_j in cajas:
+                # Calculamos la posición a la que se empujaría la caja
+                n_caja = (n_j[0] + df, n_j[1] + dc)
+                
+                # La caja no puede invadir paredes ni otras cajas
+                if n_caja in paredes or n_caja in cajas:
+                    continue
+                
+                # Reacomodamos el conjunto dinámico de cajas
+                nuevas_cajas = tuple(sorted([n_caja if c == n_j else c for c in cajas]))
+            else:
+                nuevas_cajas = cajas
+
+            nuevo_estado = (n_j, nuevas_cajas)
+
+            if nuevo_estado not in visitados:
+                visitados.add(nuevo_estado)
+                g_nuevo = g + 1
+                h_nuevo = obtener_distancia_manhattan(nuevas_cajas, metas)
+                f_nuevo = g_nuevo + h_nuevo
+                
+                heapq.heappush(open_set, (f_nuevo, g_nuevo, n_j, nuevas_cajas, ruta + [n_j]))
+
+    return [] # No hay solución
 
 def mostrar_sokoban():
     st.header("📦 Sokoban")
@@ -156,8 +239,17 @@ def mostrar_sokoban():
     st.markdown("---")
     
     # 3. Controles
-    if st.button("▶️ Resolver Nivel", type="primary"):
-        st.info("Aquí inyectaremos la lógica de A* y la Distancia Manhattan para empujar la caja a la meta.")
+    if st.button("▶️ Resolver Nivel", key="btn_resolver_sokoban", type="primary"):
+        # Ejecutamos el motor de búsqueda A*
+        ruta_pasos = resolver_sokoban_astar(mapa_sokoban)
+        
+        if ruta_pasos:
+            st.success(f"¡Nivel resuelto de manera óptima por A* en {len(ruta_pasos)-1} pasos!")
+            
+            # Mostramos un resumen de las coordenadas calculadas en el árbol
+            st.write(f"**Secuencia de movimientos calculada:** {ruta_pasos}")
+        else:
+            st.error("No se encontró una secuencia de empujes válida para resolver el mapa.")
 # ========================================== Parte de las Reinas (con tablero visual) ==========================================
 def calcular_ataques(estado):
     """
