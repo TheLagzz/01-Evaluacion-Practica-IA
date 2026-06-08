@@ -56,7 +56,7 @@ def buscar_ruta_laberinto(mapa, inicio, meta, algoritmo):
     return nodos_expandidos, [] # Retorna vacío si no hay solución
 
 def mostrar_frozen_lake():
-    st.header("🧊 Laberinto Frozen Lake")
+    st.header("Laberinto Frozen Lake")
     st.subheader("Búsqueda No Informada")
     algoritmo = st.radio("Selecciona el algoritmo:", ("BFS", "DFS"), horizontal=True)
     
@@ -202,7 +202,7 @@ def resolver_sokoban_astar(mapa_inicial):
     return [] # No hay solución
 
 def mostrar_sokoban():
-    st.header("📦 Sokoban")
+    st.header("Sokoban")
     st.subheader("Búsqueda Informada (A*)")
     algoritmo = st.radio("Selecciona el algoritmo:", ("A*",), horizontal=True)
     
@@ -335,7 +335,7 @@ def ejecutar_paso_simulated_annealing(estado, temperatura):
     return estado_final, aceptado, nueva_temperatura
 
 def mostrar_reinas():
-    st.header("👑 8 Reinas")
+    st.header("8 Reinas")
     st.subheader("Búsqueda Local")
     algoritmo = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Simulated Annealing"), horizontal=True)
     # ... (debajo de tu st.radio de algoritmos) ...
@@ -526,7 +526,7 @@ def mejor_movimiento_ia(tablero):
     return mejor_movimiento
 
 def mostrar_gato():
-    st.header("❌ Gato / Tic-Tac-Toe ⭕")
+    st.header("Gato / Tic-Tac-Toe")
     st.subheader("Búsqueda Adversaria")
     st.info("Juegas como MAX (X). La IA juega como MIN (O) usando Minimax perfecto.")
     
@@ -594,11 +594,11 @@ def main():
 
     # Ruteo de las opciones
     if opcion == "Inicio":
-        st.title("🧠 Evaluación Práctica: Algoritmos de Búsqueda")
+        st.title("Evaluación Práctica: Algoritmos de Búsqueda")
         st.markdown("### Objetivo")
         st.write("Desarrollar una aplicación interactiva que permita visualizar y comparar algoritmos de búsqueda aplicados a cuatro tipos de problemas clásicos.")
         st.markdown("---")
-        st.write("👈 **Utiliza el menú lateral para seleccionar un problema y comenzar.**")
+        st.write("**Utiliza el menú lateral para seleccionar un problema y comenzar.**")
         
     elif opcion == "1. Frozen Lake (No Informada)":
         mostrar_frozen_lake()
