@@ -11,15 +11,112 @@ st.set_page_config(page_title="IA Visualizer | ESCOM", page_icon="🧠", layout=
 # ==========================================
 # MÓDULOS DE LA INTERFAZ (Vistas vacías)
 # ==========================================
+def obtener_vecinos_laberinto(estado, mapa):
+    """Obtiene las coordenadas válidas a las que se puede mover (Arriba, Abajo, Izq, Der)."""
+    f, c = estado
+    vecinos = []
+    movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Arriba, Abajo, Izquierda, Derecha
+    
+    for df, dc in movimientos:
+        nf, nc = f + df, c + dc
+        # 1. Validar que no se salga del mapa 4x4
+        if 0 <= nf < 4 and 0 <= nc < 4:
+            # 2. Validar que la celda no sea un hoyo ('H')
+            if mapa[nf][nc] != 'H':
+                vecinos.append((nf, nc))
+    return vecinos
+
+def buscar_ruta_laberinto(mapa, inicio, meta, algoritmo):
+    """Ejecuta BFS o DFS y devuelve la ruta encontrada y los nodos visitados."""
+    # Guardamos tuplas de (estado_actual, ruta_hasta_aqui)
+    estructura_datos = [(inicio, [inicio])] 
+    visitados = set([inicio])
+    nodos_expandidos = []
+
+    while estructura_datos:
+        # AQUÍ ESTÁ LA MAGIA DE LA IA NO INFORMADA:
+        if algoritmo == "BFS":
+            actual, ruta = estructura_datos.pop(0) # COLA: Extrae del inicio
+        else: # DFS
+            actual, ruta = estructura_datos.pop(-1) # PILA: Extrae del final
+
+        nodos_expandidos.append(actual)
+
+        # Prueba de meta
+        if actual == meta:
+            return nodos_expandidos, ruta
+
+        # Expansión de vecinos
+        for vecino in obtener_vecinos_laberinto(actual, mapa):
+            if vecino not in visitados:
+                visitados.add(vecino)
+                estructura_datos.append((vecino, ruta + [vecino]))
+
+    return nodos_expandidos, [] # Retorna vacío si no hay solución
 
 def mostrar_frozen_lake():
     st.header("🧊 Laberinto Frozen Lake")
     st.subheader("Búsqueda No Informada")
     algoritmo = st.radio("Selecciona el algoritmo:", ("BFS", "DFS"), horizontal=True)
     
-    if st.button("Ejecutar Búsqueda", type="primary"):
-        st.info(f"Aquí se visualizará la ejecución de {algoritmo} paso a paso.")
-        # Aquí conectaremos la matriz y la lógica después
+    # 1. Definir el mapa fijo del laberinto 4x4
+    # S: Start (Inicio), F: Frozen (Seguro), H: Hole (Agujero), G: Goal (Meta)
+    mapa = [
+        ['S', 'F', 'F', 'F'],
+        ['F', 'H', 'F', 'H'],
+        ['F', 'F', 'F', 'H'],
+        ['H', 'F', 'F', 'G']
+    ]
+    
+    # Diccionario visual para transformar las letras en emojis
+    iconos = {
+        'S': '🧍‍♂️', # Jugador en el inicio
+        'F': '🧊', # Hielo seguro
+        'H': '🕳️', # Hoyo
+        'G': '🏆'  # Meta
+    }
+
+    st.write("### Mapa del entorno")
+    
+    # 2. Dibujar la cuadrícula en Streamlit
+    # Usamos columnas para simular el tablero 4x4
+    for fila in mapa:
+        cols = st.columns([1, 1, 1, 1, 4]) # 4 casillas y un espacio en blanco al final
+        for j, celda in enumerate(fila):
+            with cols[j]:
+                # Pintamos el cuadro como un botón deshabilitado solo para que se vea como un "bloque"
+                st.button(iconos[celda], key=f"celda_{id(fila)}_{j}", use_container_width=True, disabled=True)
+                
+    st.markdown("---")
+    
+    # 3. Controles
+    if st.button("▶️ Ejecutar Búsqueda", type="primary"):
+        inicio = (0, 0)
+        meta = (3, 3)
+        
+        # Ejecutamos el algoritmo matemático
+        expandidos, ruta = buscar_ruta_laberinto(mapa, inicio, meta, algoritmo)
+        
+        if ruta:
+            st.success(f"¡Ruta encontrada usando {algoritmo} en {len(ruta)-1} pasos!")
+            st.write(f"**Nodos explorados:** {len(expandidos)}")
+            
+            # Redibujamos el mapa mostrando la ruta
+            st.write("### Solución:")
+            for fila in range(4):
+                cols = st.columns([1, 1, 1, 1, 4])
+                for col in range(4):
+                    celda = mapa[fila][col]
+                    # Si la coordenada está en la ruta ganadora, pintamos una huella
+                    if (fila, col) in ruta and celda not in ['S', 'G']:
+                        icono_mostrar = '🐾'
+                    else:
+                        icono_mostrar = iconos[celda]
+                        
+                    with cols[col]:
+                        st.button(icono_mostrar, key=f"res_{fila}_{col}", use_container_width=True, disabled=True)
+        else:
+            st.error("No se encontró ninguna ruta a la meta.")
 
 def mostrar_sokoban():
     st.header("📦 Sokoban")
