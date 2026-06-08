@@ -120,12 +120,44 @@ def mostrar_frozen_lake():
 
 def mostrar_sokoban():
     st.header("📦 Sokoban")
-    st.subheader("Búsqueda Informada")
+    st.subheader("Búsqueda Informada (A*)")
     algoritmo = st.radio("Selecciona el algoritmo:", ("A*",), horizontal=True)
     
-    if st.button("Resolver Nivel", type="primary"):
-        st.info("Aquí se visualizará la ejecución de A* paso a paso.")
-        # Aquí conectaremos el renderizado del mapa
+    # 1. Definir el mapa 5x5 del nivel
+    # W: Wall (Pared), E: Empty (Vacio), P: Player (Jugador)
+    # B: Box (Caja), T: Target (Objetivo)
+    mapa_sokoban = [
+        ['W', 'W', 'W', 'W', 'W'],
+        ['W', 'E', 'T', 'E', 'W'],
+        ['W', 'E', 'B', 'E', 'W'],
+        ['W', 'E', 'P', 'E', 'W'],
+        ['W', 'W', 'W', 'W', 'W']
+    ]
+    
+    # Diccionario visual
+    iconos_soko = {
+        'W': '🧱',
+        'E': '⬛',
+        'P': '🧍',
+        'B': '📦',
+        'T': '🎯'
+    }
+
+    st.write("### Nivel 1")
+    
+    # 2. Renderizar el nivel
+    for fila in mapa_sokoban:
+        # 5 columnas para el mapa y una vacía para dar espacio
+        cols = st.columns([1, 1, 1, 1, 1, 3]) 
+        for j, celda in enumerate(fila):
+            with cols[j]:
+                st.button(iconos_soko[celda], key=f"soko_{id(fila)}_{j}", use_container_width=True, disabled=True)
+                
+    st.markdown("---")
+    
+    # 3. Controles
+    if st.button("▶️ Resolver Nivel", type="primary"):
+        st.info("Aquí inyectaremos la lógica de A* y la Distancia Manhattan para empujar la caja a la meta.")
 # ========================================== Parte de las Reinas (con tablero visual) ==========================================
 def calcular_ataques(estado):
     """
