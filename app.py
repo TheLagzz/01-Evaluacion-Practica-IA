@@ -210,6 +210,7 @@ def mostrar_sokoban():
     
     # Pool de niveles fijos y garantizados
     mapas_pool = [
+        # Nivel 1 (1 Caja)
         [
             ['W', 'W', 'W', 'W', 'W'],
             ['W', 'E', 'T', 'E', 'W'],
@@ -217,6 +218,7 @@ def mostrar_sokoban():
             ['W', 'E', 'P', 'E', 'W'],
             ['W', 'W', 'W', 'W', 'W']
         ],
+        # Nivel 2 (1 Caja)
         [
             ['W', 'W', 'W', 'W', 'W'],
             ['W', 'T', 'E', 'E', 'W'],
@@ -224,11 +226,20 @@ def mostrar_sokoban():
             ['W', 'E', 'E', 'P', 'W'],
             ['W', 'W', 'W', 'W', 'W']
         ],
+        # Nivel 3 (1 Caja)
         [
             ['W', 'W', 'W', 'W', 'W'],
             ['W', 'E', 'E', 'T', 'W'],
             ['W', 'E', 'B', 'E', 'W'],
             ['W', 'P', 'E', 'E', 'W'],
+            ['W', 'W', 'W', 'W', 'W']
+        ],
+        # ¡NUEVO! Nivel 4 (2 Cajas, 2 Metas)
+        [
+            ['W', 'W', 'W', 'W', 'W'],
+            ['W', 'T', 'E', 'T', 'W'],
+            ['W', 'E', 'B', 'B', 'W'],
+            ['W', 'E', 'E', 'P', 'W'],
             ['W', 'W', 'W', 'W', 'W']
         ]
     ]
