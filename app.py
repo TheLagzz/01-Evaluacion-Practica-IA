@@ -386,7 +386,7 @@ def ejecutar_paso_hill_climbing(estado):
 
     return mejor_estado, hubo_mejora
 
-def ejecutar_paso_simulated_annealing(estado, temperatura):
+def ejecutar_paso_recocido_simulado(estado, temperatura):
     """
     Toma un vecino al azar. Si es mejor, lo acepta.
     Si es peor, lo acepta con una probabilidad P = e^(-ΔE / T).
@@ -428,7 +428,7 @@ def ejecutar_paso_simulated_annealing(estado, temperatura):
 def mostrar_reinas():
     st.header("8 Reinas")
     st.subheader("Búsqueda Local")
-    algoritmo = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Simulated Annealing"), horizontal=True)
+    algoritmo = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Recocido Simulado"), horizontal=True)
     # ... (debajo de tu st.radio de algoritmos) ...
     
     # Agregamos la Temperatura a la memoria
@@ -440,8 +440,8 @@ def mostrar_reinas():
     ataques = calcular_ataques(st.session_state.estado_reinas)
     color_texto = "green" if ataques == 0 else "red"
     
-    # Mostramos la temperatura en pantalla si está en Simulated Annealing
-    if algoritmo == "Simulated Annealing":
+    # Mostramos la temperatura en pantalla si está en Recocido Simulado
+    if algoritmo == "Recocido Simulado":
         st.markdown(f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span> | 🌡️ Temp: {st.session_state.temperatura:.2f}", unsafe_allow_html=True)
     else:
         st.markdown(f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span>", unsafe_allow_html=True)
@@ -471,8 +471,8 @@ def mostrar_reinas():
                     else:
                         st.error("❌ Atascado en un Óptimo Local.")
                 
-                elif algoritmo == "Simulated Annealing":
-                    nuevo_estado, aceptado, nueva_temp = ejecutar_paso_simulated_annealing(
+                elif algoritmo == "Recocido Simulado":
+                    nuevo_estado, aceptado, nueva_temp = ejecutar_paso_recocido_simulado(
                         st.session_state.estado_reinas, 
                         st.session_state.temperatura
                     )
@@ -546,7 +546,7 @@ def mostrar_reinas():
                     else:
                         st.error("❌ Atascado en un Óptimo Local. Usa la posición aleatoria para reiniciar.")
             else:
-                st.info("Próximamente: Simulated Annealing")
+                st.info("Próximamente: Recocido Simulado con temperatura y aceptación de movimientos peores.    ")
 # ========================================== Parte del Gato (con tablero visual) ==========================================
 # 1. Prueba Terminal y Función de Utilidad
 def verificar_estado_gato(tablero):
