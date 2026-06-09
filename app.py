@@ -205,54 +205,128 @@ def resolver_sokoban_astar(mapa_inicial):
     return []
 
 def mostrar_sokoban():
-    st.header("Sokoban")
+    st.header("📦 Sokoban")
     st.subheader("Búsqueda Informada (A*)")
-    algoritmo = st.radio("Selecciona el algoritmo:", ("A*",), horizontal=True)
     
-    # 1. Definir el mapa 5x5 del nivel
-    # W: Wall (Pared), E: Empty (Vacio), P: Player (Jugador)
-    # B: Box (Caja), T: Target (Objetivo)
-    mapa_sokoban = [
-        ['W', 'W', 'W', 'W', 'W'],
-        ['W', 'E', 'T', 'E', 'W'],
-        ['W', 'E', 'B', 'E', 'W'],
-        ['W', 'E', 'P', 'E', 'W'],
-        ['W', 'W', 'W', 'W', 'W']
+    # Pool de niveles fijos y garantizados
+    mapas_pool = [
+        [
+            ['W', 'W', 'W', 'W', 'W'],
+            ['W', 'E', 'T', 'E', 'W'],
+            ['W', 'E', 'B', 'E', 'W'],
+            ['W', 'E', 'P', 'E', 'W'],
+            ['W', 'W', 'W', 'W', 'W']
+        ],
+        [
+            ['W', 'W', 'W', 'W', 'W'],
+            ['W', 'T', 'E', 'E', 'W'],
+            ['W', 'E', 'B', 'E', 'W'],
+            ['W', 'E', 'E', 'P', 'W'],
+            ['W', 'W', 'W', 'W', 'W']
+        ],
+        [
+            ['W', 'W', 'W', 'W', 'W'],
+            ['W', 'E', 'E', 'T', 'W'],
+            ['W', 'E', 'B', 'E', 'W'],
+            ['W', 'P', 'E', 'E', 'W'],
+            ['W', 'W', 'W', 'W', 'W']
+        ]
     ]
     
-    # Diccionario visual
-    iconos_soko = {
-        'W': '🧱',
-        'E': '⬛',
-        'P': '🧍',
-        'B': '📦',
-        'T': '🎯'
-    }
+    # Inicialización de variables de control en Session State
+    if 'index_mapa_soko' not in st.session_state:
+        st.session_state.index_mapa_soko = 0
+    if 'ruta_soko' not in st.session_state:
+        st.session_state.ruta_soko = None
+    if 'paso_actual_soko' not in st.session_state:
+        st.session_state.paso_actual_soko = 0
 
-    st.write("### Nivel 1")
+    mapa_base = mapas_pool[st.session_state.index_mapa_soko]
+
+    # Extraer estructuras estáticas (Paredes y Metas)
+    paredes = set()
+    metas = set()
+    for f in range(5):
+        for c in range(5):
+            if mapa_base[f][c] == 'W': paredes.add((f, c))
+            if mapa_base[f][c] == 'T': metas.add((f, c))
+
+    # Determinar las posiciones de los objetos según el paso actual
+    if st.session_state.ruta_soko and st.session_state.paso_actual_soko < len(st.session_state.ruta_soko):
+        jugador_actual, cajas_actuales = st.session_state.ruta_soko[st.session_state.paso_actual_soko]
+    else:
+        # Estado inicial por defecto si no se ha calculado o ejecutado la ruta
+        jugador_actual = None
+        cajas_actuales = set()
+        for f in range(5):
+            for c in range(5):
+                if mapa_base[f][c] == 'P': jugador_actual = (f, c)
+                elif mapa_base[f][c] == 'B': cajas_actuales.add((f, c))
+        cajas_actuales = tuple(cajas_actuales)
+
+    iconos_soko = {'W': '🧱', 'E': '⬛', 'P': '🧍', 'B': '📦', 'T': '🎯', 'BT': '✅'}
+
+    st.write(f"### Configuración del Tablero (Nivel {st.session_state.index_mapa_soko + 1})")
     
-    # 2. Renderizar el nivel
-    for fila in mapa_sokoban:
-        # 5 columnas para el mapa y una vacía para dar espacio
-        cols = st.columns([1, 1, 1, 1, 1, 3]) 
-        for j, celda in enumerate(fila):
-            with cols[j]:
-                st.button(iconos_soko[celda], key=f"soko_{id(fila)}_{j}", use_container_width=True, disabled=True)
+    # Renderizado dinámico de la matriz
+    for f in range(5):
+        cols = st.columns([1, 1, 1, 1, 1, 3])
+        for c in range(5):
+            coord = (f, c)
+            if coord in paredes:
+                icono = iconos_soko['W']
+            elif coord == jugador_actual:
+                icono = iconos_soko['P']
+            elif coord in cajas_actuales and coord in metas:
+                icono = iconos_soko['BT'] # Caja colocada con éxito
+            elif coord in cajas_actuales:
+                icono = iconos_soko['B']
+            elif coord in metas:
+                icono = iconos_soko['T']
+            else:
+                icono = iconos_soko['E']
                 
+            with cols[c]:
+                st.button(icono, key=f"soko_cell_{f}_{c}_{st.session_state.paso_actual_soko}", use_container_width=True, disabled=True)
+
     st.markdown("---")
     
-    # 3. Controles
-    if st.button("▶️ Resolver Nivel", key="btn_resolver_sokoban", type="primary"):
-        # Ejecutamos el motor de búsqueda A*
-        ruta_pasos = resolver_sokoban_astar(mapa_sokoban)
-        
-        if ruta_pasos:
-            st.success(f"¡Nivel resuelto de manera óptima por A* en {len(ruta_pasos)-1} pasos!")
+    # Barra de botones de interacción
+    cols_control = st.columns([1, 1, 1])
+    
+    with cols_control[0]:
+        if st.button("🔀 Nivel Aleatorio", key="btn_soko_random"):
+            # Selecciona un mapa diferente al actual
+            opciones = [i for i in range(len(mapas_pool)) if i != st.session_state.index_mapa_soko]
+            st.session_state.index_mapa_soko = random.choice(opciones)
+            st.session_state.ruta_soko = None
+            st.session_state.paso_actual_soko = 0
+            st.rerun()
             
-            # Mostramos un resumen de las coordenadas calculadas en el árbol
-            st.write(f"**Secuencia de movimientos calculada:** {ruta_pasos}")
-        else:
-            st.error("No se encontró una secuencia de empujes válida para resolver el mapa.")
+    with cols_control[1]:
+        if st.button("🧠 Calcular Ruta (A*)", key="btn_soko_calcular"):
+            st.session_state.ruta_soko = resolver_sokoban_astar(mapa_base)
+            st.session_state.paso_actual_soko = 0
+            if st.session_state.ruta_soko:
+                st.success("¡Estrategia óptima calculada!")
+            else:
+                st.error("Este mapa no tiene solución.")
+            st.rerun()
+
+    with cols_control[2]:
+        if st.session_state.ruta_soko:
+            total_pasos = len(st.session_state.ruta_soko) - 1
+            
+            if st.session_state.paso_actual_soko < total_pasos:
+                if st.button(f"➡️ Siguiente Paso ({st.session_state.paso_actual_soko}/{total_pasos})", key="btn_soko_step"):
+                    st.session_state.paso_actual_soko += 1
+                    st.rerun()
+            else:
+                st.success("🎉 ¡Objetivo alcanzado!")
+                if st.button("🔄 Reiniciar Nivel", key="btn_soko_reset"):
+                    st.session_state.ruta_soko = None
+                    st.session_state.paso_actual_soko = 0
+                    st.rerun()
 # ========================================== Parte de las Reinas (con tablero visual) ==========================================
 def calcular_ataques(estado):
     """
