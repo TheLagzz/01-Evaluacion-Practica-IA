@@ -148,14 +148,14 @@ def obtener_distancia_manhattan(cajas, metas):
 
 def resolver_sokoban_astar(mapa_inicial):
     """
-    Algoritmo A* que evalúa f(n) = g(n) + h(n) utilizando una cola de prioridad.
+    Algoritmo A* que evalúa f(n) = g(n) + h(n).
+    Devuelve una lista de tuplas con el estado completo (jugador, cajas) de cada paso.
     """
     paredes = set()
     metas = set()
     inicio_jugador = None
     inicio_cajas = set()
 
-    # Mapeamos la matriz para separar elementos estáticos de dinámicos
     for f in range(5):
         for c in range(5):
             celda = mapa_inicial[f][c]
@@ -164,44 +164,31 @@ def resolver_sokoban_astar(mapa_inicial):
             elif celda == 'B': inicio_cajas.add((f, c))
             elif celda == 'P': inicio_jugador = (f, c)
 
-    # Convertimos las cajas a tupla ordenada para que sea un elemento inmutable (hashable)
     inicio_cajas = tuple(sorted(inicio_cajas))
     
-    # Estructura del open_set (Cola de prioridad): (f_score, g_score, jugador, cajas, historial_pasos)
+    # La ruta ahora almacena el historial de estados completos: [(jugador, cajas), ...]
     h_inicial = obtener_distancia_manhattan(inicio_cajas, metas)
-    open_set = [(h_inicial, 0, inicio_jugador, inicio_cajas, [inicio_jugador])]
-    
-    # Registro de estados visitados para evitar bucles cíclicos
+    open_set = [(h_inicial, 0, inicio_jugador, inicio_cajas, [(inicio_jugador, inicio_cajas)])]
     visitados = set([(inicio_jugador, inicio_cajas)])
-
-    movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Arriba, Abajo, Izquierda, Derecha
+    movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 
     while open_set:
-        # Extraemos el nodo con el menor f_score estimado
         _, g, jugador, cajas, ruta = heapq.heappop(open_set)
 
-        # Condición de parada (Prueba de meta): Todas las cajas están sobre metas
         if set(cajas) == metas:
             return ruta
 
         f_j, c_j = jugador
         for df, dc in movimientos:
-            n_j = (f_j + df, c_j + dc) # Próxima posición potencial del jugador
+            n_j = (f_j + df, c_j + dc)
 
-            # Regla 1: El jugador no puede atravesar paredes
             if n_j in paredes:
                 continue
 
-            # Regla 2: Interacción con cajas
             if n_j in cajas:
-                # Calculamos la posición a la que se empujaría la caja
                 n_caja = (n_j[0] + df, n_j[1] + dc)
-                
-                # La caja no puede invadir paredes ni otras cajas
                 if n_caja in paredes or n_caja in cajas:
                     continue
-                
-                # Reacomodamos el conjunto dinámico de cajas
                 nuevas_cajas = tuple(sorted([n_caja if c == n_j else c for c in cajas]))
             else:
                 nuevas_cajas = cajas
@@ -213,10 +200,9 @@ def resolver_sokoban_astar(mapa_inicial):
                 g_nuevo = g + 1
                 h_nuevo = obtener_distancia_manhattan(nuevas_cajas, metas)
                 f_nuevo = g_nuevo + h_nuevo
-                
-                heapq.heappush(open_set, (f_nuevo, g_nuevo, n_j, nuevas_cajas, ruta + [n_j]))
+                heapq.heappush(open_set, (f_nuevo, g_nuevo, n_j, nuevas_cajas, ruta + [nuevo_estado]))
 
-    return [] # No hay solución
+    return []
 
 def mostrar_sokoban():
     st.header("Sokoban")
@@ -473,7 +459,7 @@ def mostrar_reinas():
                         st.error("❌ Atascado en un Óptimo Local. Usa la posición aleatoria para reiniciar.")
             else:
                 st.info("Próximamente: Simulated Annealing")
-
+# ========================================== Parte del Gato (con tablero visual) ==========================================
 # 1. Prueba Terminal y Función de Utilidad
 def verificar_estado_gato(tablero):
     """
