@@ -14,10 +14,13 @@ st.set_page_config(page_title="IA Visualizer | ESCOM", page_icon="🧠", layout=
 # MÓDULOS DE LA INTERFAZ (Vistas vacías)
 # ==========================================
 def obtener_vecinos_laberinto(estado, mapa):
-    """Obtiene las coordenadas válidas a las que se puede mover (Arriba, Abajo, Izq, Der)."""
+    """Obtiene las coordenadas válidas a las que se puede mover."""
     f, c = estado
     vecinos = []
     movimientos = [(-1, 0), (1, 0), (0, -1), (0, 1)] # Arriba, Abajo, Izquierda, Derecha
+    
+    # Barajamos el orden para que la exploración varíe en caminos de igual costo
+    random.shuffle(movimientos)
     
     for df, dc in movimientos:
         nf, nc = f + df, c + dc
