@@ -128,82 +128,75 @@ def mostrar_frozen_lake():
             st.error("No se encontró ninguna ruta a la meta.")
 
 def mostrar_frozen_lake():
-    st.header("Laberinto Frozen Lake")
+    st.header("🧊 Laberinto Frozen Lake")
     st.subheader("Búsqueda No Informada")
     algoritmo = st.radio("Selecciona el algoritmo:", ("BFS", "DFS"), horizontal=True)
     
-    # 1. Definir el mapa fijo del laberinto 4x4
-    # S: Start (Inicio), F: Frozen (Seguro), H: Hole (Agujero), G: Goal (Meta)
+    # 1. Nuevo mapa 6x6 con trampas y un callejón sin salida profundo a la derecha
     mapa = [
-        ['S', 'F', 'F', 'F'],
-        ['F', 'H', 'F', 'H'],
-        ['F', 'F', 'F', 'H'],
-        ['H', 'F', 'F', 'G']
+        ['S', 'F', 'H', 'F', 'F', 'F'],
+        ['F', 'F', 'H', 'F', 'H', 'F'],
+        ['H', 'F', 'F', 'F', 'H', 'F'],
+        ['F', 'H', 'F', 'H', 'H', 'F'],
+        ['F', 'F', 'F', 'F', 'F', 'F'],
+        ['F', 'H', 'F', 'H', 'H', 'G']
     ]
     
-    # Diccionario visual para transformar las letras en emojis
-    iconos = {
-        'S': '🧍‍♂️', # Jugador en el inicio
-        'F': '🧊', # Hielo seguro
-        'H': '🕳️', # Hoyo
-        'G': '🏆'  # Meta
-    }
+    iconos = {'S': '🧍‍♂️', 'F': '🧊', 'H': '🕳️', 'G': '🏆'}
+    filas = len(mapa)
+    columnas = len(mapa[0])
+    
+    # Buscamos dónde están S y G automáticamente
+    inicio = None
+    meta = None
+    for f in range(filas):
+        for c in range(columnas):
+            if mapa[f][c] == 'S': inicio = (f, c)
+            elif mapa[f][c] == 'G': meta = (f, c)
 
     st.write("### Mapa del entorno")
     
-    # 2. Dibujar la cuadrícula en Streamlit
-    # Usamos columnas para simular el tablero 4x4
+    # Generamos los pesos de las columnas dinámicamente: ej. [1, 1, 1, 1, 1, 1, 4]
+    pesos_cols = [1] * columnas + [4]
+    
     for fila in mapa:
-        cols = st.columns([1, 1, 1, 1, 4]) # 4 casillas y un espacio en blanco al final
+        cols = st.columns(pesos_cols) 
         for j, celda in enumerate(fila):
             with cols[j]:
-                # Pintamos el cuadro como un botón deshabilitado solo para que se vea como un "bloque"
                 st.button(iconos[celda], key=f"celda_{id(fila)}_{j}", use_container_width=True, disabled=True)
                 
     st.markdown("---")
     
-    # 3. Controles
     if st.button("▶️ Ejecutar Búsqueda y Animar", key="btn_animar_frozen", type="primary"):
-        inicio = (0, 0)
-        meta = (3, 3)
-        
-        # Ejecutamos el algoritmo matemático
         expandidos, ruta = buscar_ruta_laberinto(mapa, inicio, meta, algoritmo)
         
         if ruta:
             st.success(f"¡Ruta encontrada usando {algoritmo}! Reproduciendo...")
-            st.write(f"**Nodos explorados:** {len(expandidos)}")
+            st.write(f"**Nodos explorados:** {len(expandidos)} (Nota cómo DFS se atora en los callejones)")
             
-            # 4. LA MAGIA DE LA ANIMACIÓN
-            # Creamos un contenedor vacío en la pantalla
             contenedor_animacion = st.empty()
             
-            # Recorremos la ruta paso por paso (creando fotogramas)
             for i, paso_actual in enumerate(ruta):
                 with contenedor_animacion.container():
                     st.write(f"**Paso actual:** {i} / {len(ruta)-1}")
                     
-                    for fila in range(4):
-                        cols = st.columns([1, 1, 1, 1, 4])
-                        for col in range(4):
-                            celda = mapa[fila][col]
+                    for f in range(filas):
+                        cols = st.columns(pesos_cols)
+                        for c in range(columnas):
+                            celda = mapa[f][c]
                             
-                            # Lógica para decidir qué pintar en este fotograma
-                            if (fila, col) == paso_actual:
-                                icono_mostrar = '🧍‍♂️'  # El jugador moviéndose
-                            elif (fila, col) in ruta[:i]:
-                                icono_mostrar = '🐾'  # Las huellas pasadas
+                            if (f, c) == paso_actual:
+                                icono_mostrar = '🧍‍♂️'
+                            elif (f, c) in ruta[:i]:
+                                icono_mostrar = '🐾'
                             else:
-                                icono_mostrar = iconos[celda] # El mapa original
+                                icono_mostrar = iconos[celda]
                                 
-                            with cols[col]:
-                                # Key dinámica obligatoria para que Streamlit no tire error en el loop
-                                st.button(icono_mostrar, key=f"anim_fl_{fila}_{col}_{i}", use_container_width=True, disabled=True)
-                
-                # Pausamos medio segundo antes de sobreescribir con el siguiente paso
+                            with cols[c]:
+                                st.button(icono_mostrar, key=f"anim_fl_{f}_{c}_{i}", use_container_width=True, disabled=True)
                 time.sleep(0.5)
             
-            st.balloons() # Efecto de victoria al llegar a la meta
+            st.balloons()
         else:
             st.error("No se encontró ninguna ruta a la meta.")
 # ========================================== Parte de Sokoban (con mapa visual) ==========================================
