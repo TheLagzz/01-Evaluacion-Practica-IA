@@ -280,13 +280,15 @@ def mostrar_sokoban():
         # Nivel 4 (2 Cajas)
         [['W', 'W', 'W', 'W', 'W'], ['W', 'T', 'E', 'T', 'W'], ['W', 'E', 'B', 'B', 'W'], ['W', 'E', 'E', 'P', 'W'], ['W', 'W', 'W', 'W', 'W']],
         # ¡NUEVO! Nivel 5 (Nivel Difícil 6x6)
+        # Nivel 5 (El Reto Final: 7x8, 2 Cajas, 2 Metas, Recorrido muy largo)
         [
-            ['W', 'W', 'W', 'W', 'W', 'W'],
-            ['W', 'T', 'E', 'P', 'E', 'W'],
-            ['W', 'E', 'W', 'W', 'E', 'W'],
-            ['W', 'E', 'B', 'E', 'E', 'W'],
-            ['W', 'E', 'E', 'E', 'E', 'W'],
-            ['W', 'W', 'W', 'W', 'W', 'W']
+            ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W'],
+            ['W', 'T', 'E', 'E', 'E', 'E', 'T', 'W'],
+            ['W', 'E', 'W', 'W', 'W', 'W', 'E', 'W'],
+            ['W', 'E', 'B', 'E', 'B', 'E', 'E', 'W'],
+            ['W', 'E', 'W', 'P', 'W', 'W', 'E', 'W'],
+            ['W', 'E', 'E', 'E', 'E', 'E', 'E', 'W'],
+            ['W', 'W', 'W', 'W', 'W', 'W', 'W', 'W']
         ]
     ]
     
