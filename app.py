@@ -460,42 +460,95 @@ def ejecutar_paso_recocido_simulado(estado, temperatura):
     estado_final = vecino if aceptado else estado
     return estado_final, aceptado, nueva_temperatura
 
+def auto_resolver_reinas(estado_inicial, algoritmo, temp_inicial=10.0):
+    """
+    Calcula toda la secuencia de movimientos hasta encontrar la solución perfecta (0 ataques).
+    Incluye reinicios aleatorios automáticos si el algoritmo se estanca.
+    """
+    historial = []
+    estado_actual = list(estado_inicial)
+    temp = temp_inicial
+    ataques = calcular_ataques(estado_actual)
+    
+    # Guardamos el primer fotograma
+    historial.append((list(estado_actual), ataques, temp))
+    
+    iteracion = 0
+    # Límite de seguridad de 1000 iteraciones para evitar que la app colapse
+    while ataques > 0 and iteracion < 1000:
+        if algoritmo == "Hill Climbing":
+            nuevo_estado, mejoro = ejecutar_paso_hill_climbing(estado_actual)
+            if mejoro:
+                estado_actual = nuevo_estado
+            else:
+                # ¡REINICIO ALEATORIO! Se estancó en un óptimo local
+                estado_actual = [random.randint(0, 7) for _ in range(8)]
+        
+        elif algoritmo == "Recocido Simulado":
+            nuevo_estado, aceptado, temp = ejecutar_paso_recocido_simulado(estado_actual, temp)
+            estado_actual = nuevo_estado
+            # Si la temperatura baja a casi cero y no encontró el óptimo, forzamos reinicio
+            if temp < 0.001 and calcular_ataques(estado_actual) > 0:
+                estado_actual = [random.randint(0, 7) for _ in range(8)]
+                temp = 10.0
+        
+        ataques = calcular_ataques(estado_actual)
+        historial.append((list(estado_actual), ataques, temp))
+        iteracion += 1
+        
+    return historial
+
 def mostrar_reinas():
     st.header("8 Reinas")
     st.subheader("Búsqueda Local")
     algoritmo = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Recocido Simulado"), horizontal=True)
-    # ... (debajo de tu st.radio de algoritmos) ...
     
-    # Agregamos la Temperatura a la memoria
     if 'estado_reinas' not in st.session_state:
         st.session_state.estado_reinas = [0, 1, 2, 3, 4, 5, 6, 7]
     if 'temperatura' not in st.session_state:
-        st.session_state.temperatura = 10.0 # Temperatura inicial
+        st.session_state.temperatura = 10.0 
         
-    ataques = calcular_ataques(st.session_state.estado_reinas)
-    color_texto = "green" if ataques == 0 else "red"
+    # Contenedor dinámico donde se dibujará el tablero
+    contenedor_tablero = st.empty()
     
-    # Mostramos la temperatura en pantalla si está en Recocido Simulado
-    if algoritmo == "Recocido Simulado":
-        st.markdown(f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span> | 🌡️ Temp: {st.session_state.temperatura:.2f}", unsafe_allow_html=True)
-    else:
-        st.markdown(f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span>", unsafe_allow_html=True)
+    # Función interna rápida para generar el HTML del tablero
+    def renderizar_tablero(estado, ataques, temp):
+        color_texto = "green" if ataques == 0 else "red"
+        
+        if algoritmo == "Recocido Simulado":
+            html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span> | 🌡️ Temp: {temp:.2f}"
+        else:
+            html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span>"
+            
+        html += "<br><div style='display: grid; grid-template-columns: repeat(8, 50px); width: 400px; border: 3px solid black; box-shadow: 5px 5px 15px rgba(0,0,0,0.3);'>"
+        for fila in range(8):
+            for col in range(8):
+                es_blanca = (fila + col) % 2 == 0
+                color_fondo = "#FFCE9E" if es_blanca else "#D18B47"
+                hay_reina = estado[col] == fila
+                icono = "👑" if hay_reina else "&nbsp;"
+                html += f"<div style='width: 50px; height: 50px; background-color: {color_fondo}; display: flex; justify-content: center; align-items: center; font-size: 32px;'>{icono}</div>"
+        html += "</div><br>"
+        return html
 
-    # ... (El renderizado del tablero de HTML se queda exactamente igual) ...
-
-    # --- ACTUALIZAR LOS CONTROLES ---
+    # Dibujamos el estado actual por defecto
+    ataques_actuales = calcular_ataques(st.session_state.estado_reinas)
+    with contenedor_tablero.container():
+        st.markdown(renderizar_tablero(st.session_state.estado_reinas, ataques_actuales, st.session_state.temperatura), unsafe_allow_html=True)
+    
+    # Controles interactivos
     st.markdown("---")
-    cols = st.columns([1, 1, 2])
+    cols = st.columns([1, 1, 1])
     
     with cols[0]:
-        if st.button("🔀 Posición Aleatoria"):
+        if st.button("🔀 Posición Aleatoria", key="btn_random_reinas", use_container_width=True):
             st.session_state.estado_reinas = [random.randint(0, 7) for _ in range(8)]
-            st.session_state.temperatura = 10.0 # Reiniciamos la temperatura
+            st.session_state.temperatura = 10.0 
             st.rerun()
             
     with cols[1]:
-        if st.button("▶️ Ejecutar Paso"):
-            if calcular_ataques(st.session_state.estado_reinas) == 0:
+        if st.button("▶️ Ejecutar Paso", key="btn_ejecutar_paso", use_container_width=True):
+            if ataques_actuales == 0:
                 st.success("¡Máximo Global alcanzado! 0 ataques.")
             else:
                 if algoritmo == "Hill Climbing":
@@ -504,84 +557,37 @@ def mostrar_reinas():
                         st.session_state.estado_reinas = nuevo_estado
                         st.rerun()
                     else:
-                        st.error("❌ Atascado en un Óptimo Local.")
+                        st.error("❌ Atascado en un Óptimo Local. Usa la posición aleatoria o el Auto-Resolver.")
                 
                 elif algoritmo == "Recocido Simulado":
-                    nuevo_estado, aceptado, nueva_temp = ejecutar_paso_recocido_simulado(
-                        st.session_state.estado_reinas, 
-                        st.session_state.temperatura
-                    )
+                    nuevo_estado, aceptado, nueva_temp = ejecutar_paso_recocido_simulado(st.session_state.estado_reinas, st.session_state.temperatura)
                     st.session_state.temperatura = nueva_temp
-                    
                     if aceptado:
                         st.session_state.estado_reinas = nuevo_estado
                         st.rerun()
                     else:
                         st.warning(f"Movimiento peor rechazado. Temperatura bajando a {nueva_temp:.2f}")
-    # Calculamos los ataques ANTES de dibujar el tablero
-    if 'estado_reinas' not in st.session_state:
-        st.session_state.estado_reinas = [0, 1, 2, 3, 4, 5, 6, 7]
-        
-    ataques = calcular_ataques(st.session_state.estado_reinas)
-    
-    # Mostramos el puntaje con un color dependiendo de qué tan mal está
-    color_texto = "green" if ataques == 0 else "red"
-    st.markdown(f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span>", unsafe_allow_html=True)
-    st.write("### Tablero Actual")
-    
-    # 1. Estado inicial en la memoria
-    # El índice es la columna (0-7), el valor es la fila (0-7)
-    if 'estado_reinas' not in st.session_state:
-        st.session_state.estado_reinas = [0, 1, 2, 3, 4, 5, 6, 7] # Empieza en diagonal
-        
-    # 2. Construcción visual del tablero con HTML/CSS
-    # Usamos CSS grid para armar un cuadro de 8x8 perfecto
-    tablero_html = "<div style='display: grid; grid-template-columns: repeat(8, 50px); width: 400px; border: 3px solid black; box-shadow: 5px 5px 15px rgba(0,0,0,0.3);'>"
-    
-    for fila in range(8):
-        for col in range(8):
-            # Pintar las casillas alternadas (estilo ajedrez de madera)
-            es_blanca = (fila + col) % 2 == 0
-            color_fondo = "#FFCE9E" if es_blanca else "#D18B47"
-            
-            # Verificar si en esta coordenada (columna, fila) hay una reina
-            hay_reina = st.session_state.estado_reinas[col] == fila
-            icono = "👑" if hay_reina else "&nbsp;"
-            
-            # Armar la casilla
-            tablero_html += f"<div style='width: 50px; height: 50px; background-color: {color_fondo}; display: flex; justify-content: center; align-items: center; font-size: 32px;'>{icono}</div>"
-            
-    tablero_html += "</div><br>"
-    
-    # Renderizar el HTML en Streamlit
-    st.markdown(tablero_html, unsafe_allow_html=True)
-    
-    # 3. Controles interactivos
-    st.markdown("---")
-    cols = st.columns([1, 1, 2])
-    
-    with cols[0]:
-        if st.button("🔀 Posición Aleatoria", key="btn_random_reinas"):
-            # Genera un nuevo vector con números al azar del 0 al 7
-            st.session_state.estado_reinas = [random.randint(0, 7) for _ in range(8)]
-            st.rerun()
-            
-    with cols[1]:
-        if st.button("▶️ Ejecutar Paso", key="btn_ejecutar_paso"):
-            if algoritmo == "Hill Climbing":
-                # Verificamos si ya ganamos
-                if calcular_ataques(st.session_state.estado_reinas) == 0:
-                    st.success("¡Máximo Global alcanzado! 0 ataques.")
-                else:
-                    nuevo_estado, mejoro = ejecutar_paso_hill_climbing(st.session_state.estado_reinas)
-                    
-                    if mejoro:
-                        st.session_state.estado_reinas = nuevo_estado
-                        st.rerun() # Refresca la pantalla para ver el movimiento
-                    else:
-                        st.error("❌ Atascado en un Óptimo Local. Usa la posición aleatoria para reiniciar.")
+                        
+    with cols[2]:
+        if st.button("🚀 Auto-Resolver", key="btn_auto_reinas", type="primary", use_container_width=True):
+            if ataques_actuales == 0:
+                st.success("El tablero ya está resuelto.")
             else:
-                st.info("Próximamente: Recocido Simulado con temperatura y aceptación de movimientos peores.    ")
+                st.info("Calculando ruta óptima con reinicios aleatorios...")
+                # 1. Calculamos todo el proceso en milisegundos
+                historial_fotogramas = auto_resolver_reinas(st.session_state.estado_reinas, algoritmo, st.session_state.temperatura)
+                
+                # 2. Reproducimos el historial fotograma por fotograma en la pantalla
+                for estado_fotograma, ataques_fotograma, temp_fotograma in historial_fotogramas:
+                    with contenedor_tablero.container():
+                        st.markdown(renderizar_tablero(estado_fotograma, ataques_fotograma, temp_fotograma), unsafe_allow_html=True)
+                    time.sleep(0.25) # Animación rápida
+                
+                # 3. Guardamos el estado final ganador en la memoria y celebramos
+                st.session_state.estado_reinas = historial_fotogramas[-1][0]
+                st.session_state.temperatura = historial_fotogramas[-1][2]
+                st.balloons()
+                st.success(f"¡Solución encontrada en {len(historial_fotogramas)} iteraciones!")
 # ========================================== Parte del Gato (con tablero visual) ==========================================
 # 1. Prueba Terminal y Función de Utilidad
 def verificar_estado_gato(tablero):
