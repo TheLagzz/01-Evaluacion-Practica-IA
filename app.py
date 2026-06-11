@@ -605,45 +605,76 @@ def verificar_estado_gato(tablero):
         
     return None # El juego continúa
 
-# 2. Algoritmo Minimax (Recursivo)
-def minimax_gato(tablero, es_maximizador):
-    """
-    Simula todas las jugadas posibles hasta las hojas y respalda el valor minimax.
-    """
+# 2. Algoritmos de Búsqueda Adversaria
+def minimax_clasico(tablero, es_maximizador):
+    """Fuerza bruta: Simula todas las jugadas posibles sin cortes."""
+    st.session_state.nodos_evaluados += 1 # Contador de nodos
     utilidad = verificar_estado_gato(tablero)
-    
-    # Condición de paro: si es nodo terminal, devolver U(s)
-    if utilidad is not None:
-        return utilidad
+    if utilidad is not None: return utilidad
         
     if es_maximizador:
         mejor_valor = -math.inf
         for i in range(9):
             if tablero[i] == ' ':
-                tablero[i] = 'X' # Acción de MAX
-                valor = minimax_gato(tablero, False)
-                tablero[i] = ' ' # Deshacer acción (Backtracking)
-                mejor_valor = max(mejor_valor, valor) # Conservar el máximo
+                tablero[i] = 'X' 
+                mejor_valor = max(mejor_valor, minimax_clasico(tablero, False))
+                tablero[i] = ' ' 
         return mejor_valor
     else:
         mejor_valor = math.inf
         for i in range(9):
             if tablero[i] == ' ':
-                tablero[i] = 'O' # Acción de MIN
-                valor = minimax_gato(tablero, True)
+                tablero[i] = 'O' 
+                mejor_valor = min(mejor_valor, minimax_clasico(tablero, True))
                 tablero[i] = ' '
-                mejor_valor = min(mejor_valor, valor) # Conservar el mínimo
         return mejor_valor
 
-# 3. Función auxiliar para que la IA mueva
-def mejor_movimiento_ia(tablero):
+def minimax_alfa_beta_gato(tablero, profundidad, es_maximizador, alfa, beta):
+    """Optimizado: Utiliza Poda Alfa-Beta para descartar ramas inútiles."""
+    st.session_state.nodos_evaluados += 1 # Contador de nodos
+    utilidad = verificar_estado_gato(tablero)
+    
+    if utilidad is not None:
+        if utilidad == 1: return utilidad - (profundidad * 0.1)
+        elif utilidad == -1: return utilidad + (profundidad * 0.1)
+        else: return 0
+        
+    if es_maximizador:
+        mejor_valor = -math.inf
+        for i in range(9):
+            if tablero[i] == ' ':
+                tablero[i] = 'X' 
+                mejor_valor = max(mejor_valor, minimax_alfa_beta_gato(tablero, profundidad + 1, False, alfa, beta))
+                tablero[i] = ' ' 
+                alfa = max(alfa, mejor_valor)
+                if beta <= alfa: break # PODA
+        return mejor_valor
+    else:
+        mejor_valor = math.inf
+        for i in range(9):
+            if tablero[i] == ' ':
+                tablero[i] = 'O' 
+                mejor_valor = min(mejor_valor, minimax_alfa_beta_gato(tablero, profundidad + 1, True, alfa, beta))
+                tablero[i] = ' '
+                beta = min(beta, mejor_valor)
+                if beta <= alfa: break # PODA
+        return mejor_valor
+
+# 3. Función auxiliar para que la IA mueva según el algoritmo elegido
+def mejor_movimiento_ia(tablero, algoritmo):
     mejor_valor = math.inf
     mejor_movimiento = -1
+    st.session_state.nodos_evaluados = 0 # Reiniciamos el contador por cada turno
     
     for i in range(9):
         if tablero[i] == ' ':
-            tablero[i] = 'O' # La IA es MIN
-            valor = minimax_gato(tablero, True)
+            tablero[i] = 'O' 
+            
+            if algoritmo == "Minimax Clásico":
+                valor = minimax_clasico(tablero, True)
+            else:
+                valor = minimax_alfa_beta_gato(tablero, 0, True, -math.inf, math.inf)
+                
             tablero[i] = ' '
             if valor < mejor_valor:
                 mejor_valor = valor
@@ -654,12 +685,20 @@ def mejor_movimiento_ia(tablero):
 def mostrar_gato():
     st.header("Gato / Tic-Tac-Toe")
     st.subheader("Búsqueda Adversaria")
-    st.info("Juegas como MAX (X). La IA juega como MIN (O) usando Minimax perfecto.")
     
-    # 1. Inicializamos el tablero en la memoria
+    # Menú para comparar los algoritmos
+    algoritmo = st.radio("Selecciona el algoritmo de la IA:", ("Minimax Clásico", "Poda Alfa-Beta"), horizontal=True)
+    st.info("Juegas como MAX (X). La IA juega como MIN (O). Observa la diferencia de nodos evaluados.")
+    
+    # 1. Inicializamos la memoria
     if 'tablero_gato' not in st.session_state:
         st.session_state.tablero_gato = [' '] * 9
         st.session_state.ganador_gato = None
+    if 'nodos_evaluados' not in st.session_state:
+        st.session_state.nodos_evaluados = 0
+
+    # Mostrar contador de eficiencia
+    st.write(f"**Nodos evaluados en el último turno de la IA:** `{st.session_state.nodos_evaluados}`")
 
     # 2. Dibujamos la cuadrícula 3x3
     st.write("### Tablero de Juego")
@@ -668,18 +707,17 @@ def mostrar_gato():
     for i in range(9):
         with cols[i % 3]:
             etiqueta = st.session_state.tablero_gato[i] if st.session_state.tablero_gato[i] != ' ' else '...'
-            
-            # Bloquear botones si la casilla está ocupada o ya hay ganador
             deshabilitado = st.session_state.tablero_gato[i] != ' ' or st.session_state.ganador_gato is not None
             
             if st.button(etiqueta, key=f"casilla_{i}", use_container_width=True, disabled=deshabilitado):
-                # Turno del Jugador (MAX)
+                # Turno MAX
                 st.session_state.tablero_gato[i] = 'X'
                 st.session_state.ganador_gato = verificar_estado_gato(st.session_state.tablero_gato)
                 
-                # Turno de la IA (MIN) si el juego no ha terminado
+                # Turno MIN
                 if st.session_state.ganador_gato is None:
-                    movimiento_ia = mejor_movimiento_ia(st.session_state.tablero_gato)
+                    # Inyectamos el algoritmo seleccionado
+                    movimiento_ia = mejor_movimiento_ia(st.session_state.tablero_gato, algoritmo)
                     if movimiento_ia != -1:
                         st.session_state.tablero_gato[movimiento_ia] = 'O'
                         st.session_state.ganador_gato = verificar_estado_gato(st.session_state.tablero_gato)
@@ -700,6 +738,7 @@ def mostrar_gato():
     if st.button("🔄 Reiniciar Tablero", type="primary"):
         st.session_state.tablero_gato = [' '] * 9
         st.session_state.ganador_gato = None
+        st.session_state.nodos_evaluados = 0
         st.rerun()
 
 # ==========================================
