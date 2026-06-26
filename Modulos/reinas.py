@@ -4,194 +4,195 @@ import math
 import time
 
 
-def calcular_ataques(estado):
+def calcular_ataques(estado_reinas):
 	"""
 	Calcula cuántos pares de reinas se están atacando.
 	Un estado perfecto devolverá 0.
 	"""
-	ataques = 0
-	for i in range(8):
-		for j in range(i + 1, 8):
-			if estado[i] == estado[j]:
-				ataques += 1
-			elif abs(i - j) == abs(estado[i] - estado[j]):
-				ataques += 1
-	return ataques
+	cantidad_ataques = 0
+	for columna_actual in range(8):
+		for otra_columna in range(columna_actual + 1, 8):
+			if estado_reinas[columna_actual] == estado_reinas[otra_columna]: #Si dos reinas están en la misma fila, se cuentan como un ataque.
+				cantidad_ataques += 1
+			elif abs(columna_actual - otra_columna) == abs(estado_reinas[columna_actual] - estado_reinas[otra_columna]): #Si dos reinas están en la misma diagonal, se cuentan como un ataque. La condición abs(i - j) == abs(estado[i] - estado[j]) verifica si las reinas en las columnas i y j están en la misma diagonal, lo que ocurre cuando la diferencia de filas es igual a la diferencia de columnas.
+				cantidad_ataques += 1
+	return cantidad_ataques
 
 
-def ejecutar_paso_hill_climbing(estado):
+def ejecutar_paso_hill_climbing(estado_reinas):
 	"""
 	Evalúa todos los vecinos posibles (mover una reina en su columna)
 	y selecciona el que tenga el menor número de ataques.
 	"""
-	mejor_estado = list(estado)
-	mejor_ataque = calcular_ataques(estado)
+	estado_mejor = list(estado_reinas)
+	menor_cantidad_ataques = calcular_ataques(estado_reinas)
 	hubo_mejora = False
 
-	for col in range(8):
-		for fila in range(8):
-			if fila != estado[col]:
-				vecino = list(estado)
-				vecino[col] = fila
-				ataques_vecino = calcular_ataques(vecino)
+	for columna_actual in range(8):
+		for fila_objetivo in range(8):
+			if fila_objetivo != estado_reinas[columna_actual]:
+				estado_vecino = list(estado_reinas)
+				estado_vecino[columna_actual] = fila_objetivo
+				cantidad_ataques_vecino = calcular_ataques(estado_vecino)
 
-				if ataques_vecino < mejor_ataque:
-					mejor_ataque = ataques_vecino
-					mejor_estado = list(vecino)
+				if cantidad_ataques_vecino < menor_cantidad_ataques:
+					menor_cantidad_ataques = cantidad_ataques_vecino
+					estado_mejor = list(estado_vecino)
 					hubo_mejora = True
 
-	return mejor_estado, hubo_mejora
+	return estado_mejor, hubo_mejora
 
 
-def ejecutar_paso_recocido_simulado(estado, temperatura):
+def ejecutar_paso_recocido_simulado(estado_reinas, temperatura_actual):
 	"""
 	Toma un vecino al azar. Si es mejor, lo acepta.
 	Si es peor, lo acepta con una probabilidad P = e^(-ΔE / T).
 	"""
-	ataque_actual = calcular_ataques(estado)
+	ataques_actuales = calcular_ataques(estado_reinas)
 
-	col_random = random.randint(0, 7)
-	fila_random = random.randint(0, 7)
+	columna_aleatoria = random.randint(0, 7)
+	fila_aleatoria = random.randint(0, 7)
 
-	while fila_random == estado[col_random]:
-		fila_random = random.randint(0, 7)
+	while fila_aleatoria == estado_reinas[columna_aleatoria]:
+		fila_aleatoria = random.randint(0, 7)
 
-	vecino = list(estado)
-	vecino[col_random] = fila_random
-	ataque_vecino = calcular_ataques(vecino)
+	estado_vecino = list(estado_reinas)
+	estado_vecino[columna_aleatoria] = fila_aleatoria
+	ataques_vecino = calcular_ataques(estado_vecino)
 
-	delta_e = ataque_vecino - ataque_actual
+	delta_energia = ataques_vecino - ataques_actuales # Si delta_e es negativo, el vecino es mejor (menos ataques). Si es positivo, el vecino es peor (más ataques).
 	aceptado = False
 
-	if delta_e < 0:
+	if delta_energia < 0:
 		aceptado = True
 	else:
-		if temperatura > 0.01:
-			probabilidad = math.exp(-delta_e / temperatura)
+		if temperatura_actual > 0.01:
+			probabilidad = math.exp(-delta_energia / temperatura_actual)
 			if random.random() < probabilidad:
 				aceptado = True
 
-	nueva_temperatura = temperatura * 0.95
+	nueva_temperatura = temperatura_actual * 0.95
 
-	estado_final = vecino if aceptado else estado
+	estado_final = estado_vecino if aceptado else estado_reinas
 	return estado_final, aceptado, nueva_temperatura
 
 
-def auto_resolver_reinas(estado_inicial, algoritmo, temp_inicial=10.0):
+def auto_resolver_reinas(estado_inicial_reinas, algoritmo, temperatura_inicial=10.0):
 	"""
 	Calcula toda la secuencia de movimientos hasta encontrar la solución perfecta (0 ataques).
-	Incluye reinicios aleatorios automáticos si el algoritmo se estanca.
+	reinicios aleatorios automáticos si el algoritmo se estanca.
 	"""
-	historial = []
-	estado_actual = list(estado_inicial)
-	temp = temp_inicial
-	ataques = calcular_ataques(estado_actual)
+	historial_fotogramas = []
+	estado_actual = list(estado_inicial_reinas)
+	temperatura_actual = temperatura_inicial
+	ataques_actuales = calcular_ataques(estado_actual)
 
-	historial.append((list(estado_actual), ataques, temp))
+	historial_fotogramas.append((list(estado_actual), ataques_actuales, temperatura_actual))
 
-	iteracion = 0
-	while ataques > 0 and iteracion < 1000:
+	iteracion_actual = 0
+	while ataques_actuales > 0 and iteracion_actual < 1000:
 		if algoritmo == "Hill Climbing":
-			nuevo_estado, mejoro = ejecutar_paso_hill_climbing(estado_actual)
-			if mejoro:
-				estado_actual = nuevo_estado
+			estado_siguiente, hubo_mejora = ejecutar_paso_hill_climbing(estado_actual)
+			if hubo_mejora:
+				estado_actual = estado_siguiente
 			else:
 				estado_actual = [random.randint(0, 7) for _ in range(8)]
 
 		elif algoritmo == "Recocido Simulado":
-			nuevo_estado, aceptado, temp = ejecutar_paso_recocido_simulado(estado_actual, temp)
-			estado_actual = nuevo_estado
-			if temp < 0.001 and calcular_ataques(estado_actual) > 0:
+			estado_siguiente, aceptado, temperatura_actual = ejecutar_paso_recocido_simulado(estado_actual, temperatura_actual)
+			estado_actual = estado_siguiente
+			"""Si la temperatura es muy baja y aún no se ha encontrado la solución, se reinicia con una nueva posición aleatoria para evitar estancarse en un óptimo local."""
+			if temperatura_actual < 0.001 and calcular_ataques(estado_actual) > 0:
 				estado_actual = [random.randint(0, 7) for _ in range(8)]
-				temp = 10.0
+				temperatura_actual = 10.0
 
-		ataques = calcular_ataques(estado_actual)
-		historial.append((list(estado_actual), ataques, temp))
-		iteracion += 1
+		ataques_actuales = calcular_ataques(estado_actual)
+		historial_fotogramas.append((list(estado_actual), ataques_actuales, temperatura_actual))
+		iteracion_actual += 1
 
-	return historial
+	return historial_fotogramas
 
 
 def mostrar_reinas():
 	st.header("8 Reinas")
 	st.subheader("Búsqueda Local")
-	algoritmo = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Recocido Simulado"), horizontal=True)
+	algoritmo_seleccionado = st.radio("Selecciona el algoritmo:", ("Hill Climbing", "Recocido Simulado"), horizontal=True)
 
-	if 'estado_reinas' not in st.session_state:
-		st.session_state.estado_reinas = [0, 1, 2, 3, 4, 5, 6, 7]
-	if 'temperatura' not in st.session_state:
-		st.session_state.temperatura = 10.0
+	if 'estado_tablero_reinas' not in st.session_state:
+		st.session_state.estado_tablero_reinas = [0, 1, 2, 3, 4, 5, 6, 7]
+	if 'temperatura_recocido_reinas' not in st.session_state:
+		st.session_state.temperatura_recocido_reinas = 10.0
 
 	contenedor_tablero = st.empty()
 
-	def renderizar_tablero(estado, ataques, temp):
-		color_texto = "green" if ataques == 0 else "red"
+	def renderizar_tablero(estado_reinas, cantidad_ataques, temperatura_actual):
+		color_texto = "green" if cantidad_ataques == 0 else "red"
 
-		if algoritmo == "Recocido Simulado":
-			html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span> | 🌡️ Temp: {temp:.2f}"
+		if algoritmo_seleccionado == "Recocido Simulado":
+			html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {cantidad_ataques}</span> | 🌡️ Temp: {temperatura_actual:.2f}"
 		else:
-			html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {ataques}</span>"
+			html = f"### Tablero Actual | <span style='color:{color_texto}'>Ataques: {cantidad_ataques}</span>"
 
 		html += "<br><div style='display: grid; grid-template-columns: repeat(8, 50px); width: 400px; border: 3px solid black; box-shadow: 5px 5px 15px rgba(0,0,0,0.3);'>"
-		for fila in range(8):
-			for col in range(8):
-				es_blanca = (fila + col) % 2 == 0
+		for fila_indice in range(8):
+			for columna_indice in range(8):
+				es_blanca = (fila_indice + columna_indice) % 2 == 0
 				color_fondo = "#FFCE9E" if es_blanca else "#D18B47"
-				hay_reina = estado[col] == fila
+				hay_reina = estado_reinas[columna_indice] == fila_indice
 				icono = "👑" if hay_reina else "&nbsp;"
 				html += f"<div style='width: 50px; height: 50px; background-color: {color_fondo}; display: flex; justify-content: center; align-items: center; font-size: 32px;'>{icono}</div>"
 		html += "</div><br>"
 		return html
 
-	ataques_actuales = calcular_ataques(st.session_state.estado_reinas)
+	ataques_actuales = calcular_ataques(st.session_state.estado_tablero_reinas)
 	with contenedor_tablero.container():
-		st.markdown(renderizar_tablero(st.session_state.estado_reinas, ataques_actuales, st.session_state.temperatura), unsafe_allow_html=True)
+		st.markdown(renderizar_tablero(st.session_state.estado_tablero_reinas, ataques_actuales, st.session_state.temperatura_recocido_reinas), unsafe_allow_html=True)
 
 	st.markdown("---")
-	cols = st.columns([1, 1, 1])
+	columnas_botones = st.columns([1, 1, 1])
 
-	with cols[0]:
+	with columnas_botones[0]:
 		if st.button("🔀 Posición Aleatoria", key="btn_random_reinas", use_container_width=True):
-			st.session_state.estado_reinas = [random.randint(0, 7) for _ in range(8)]
-			st.session_state.temperatura = 10.0
+			st.session_state.estado_tablero_reinas = [random.randint(0, 7) for _ in range(8)]
+			st.session_state.temperatura_recocido_reinas = 10.0
 			st.rerun()
 
-	with cols[1]:
+	with columnas_botones[1]:
 		if st.button("▶️ Ejecutar Paso", key="btn_ejecutar_paso", use_container_width=True):
 			if ataques_actuales == 0:
 				st.success("¡Máximo Global alcanzado! 0 ataques.")
 			else:
-				if algoritmo == "Hill Climbing":
-					nuevo_estado, mejoro = ejecutar_paso_hill_climbing(st.session_state.estado_reinas)
-					if mejoro:
-						st.session_state.estado_reinas = nuevo_estado
+				if algoritmo_seleccionado == "Hill Climbing":
+					estado_siguiente, hubo_mejora = ejecutar_paso_hill_climbing(st.session_state.estado_tablero_reinas)
+					if hubo_mejora:
+						st.session_state.estado_tablero_reinas = estado_siguiente
 						st.rerun()
 					else:
 						st.error("❌ Atascado en un Óptimo Local. Usa la posición aleatoria o el Auto-Resolver.")
 
-				elif algoritmo == "Recocido Simulado":
-					nuevo_estado, aceptado, nueva_temp = ejecutar_paso_recocido_simulado(st.session_state.estado_reinas, st.session_state.temperatura)
-					st.session_state.temperatura = nueva_temp
+				elif algoritmo_seleccionado == "Recocido Simulado":
+					estado_siguiente, aceptado, nueva_temperatura = ejecutar_paso_recocido_simulado(st.session_state.estado_tablero_reinas, st.session_state.temperatura_recocido_reinas)
+					st.session_state.temperatura_recocido_reinas = nueva_temperatura
 					if aceptado:
-						st.session_state.estado_reinas = nuevo_estado
+						st.session_state.estado_tablero_reinas = estado_siguiente
 						st.rerun()
 					else:
-						st.warning(f"Movimiento peor rechazado. Temperatura bajando a {nueva_temp:.2f}")
+						st.warning(f"Movimiento peor rechazado. Temperatura bajando a {nueva_temperatura:.2f}")
 
-	with cols[2]:
+	with columnas_botones[2]:
 		if st.button("🚀 Auto-Resolver", key="btn_auto_reinas", type="primary", use_container_width=True):
 			if ataques_actuales == 0:
 				st.success("El tablero ya está resuelto.")
 			else:
 				st.info("Calculando ruta óptima con reinicios aleatorios...")
-				historial_fotogramas = auto_resolver_reinas(st.session_state.estado_reinas, algoritmo, st.session_state.temperatura)
+				historial_fotogramas = auto_resolver_reinas(st.session_state.estado_tablero_reinas, algoritmo_seleccionado, st.session_state.temperatura_recocido_reinas)
 
-				for estado_fotograma, ataques_fotograma, temp_fotograma in historial_fotogramas:
+				for estado_fotograma, ataques_fotograma, temperatura_fotograma in historial_fotogramas:
 					with contenedor_tablero.container():
-						st.markdown(renderizar_tablero(estado_fotograma, ataques_fotograma, temp_fotograma), unsafe_allow_html=True)
+						st.markdown(renderizar_tablero(estado_fotograma, ataques_fotograma, temperatura_fotograma), unsafe_allow_html=True)
 					time.sleep(0.25)
 
-				st.session_state.estado_reinas = historial_fotogramas[-1][0]
-				st.session_state.temperatura = historial_fotogramas[-1][2]
+				st.session_state.estado_tablero_reinas = historial_fotogramas[-1][0]
+				st.session_state.temperatura_recocido_reinas = historial_fotogramas[-1][2]
 				st.balloons()
 				st.success(f"¡Solución encontrada en {len(historial_fotogramas)} iteraciones!")
